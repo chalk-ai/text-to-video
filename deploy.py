@@ -52,9 +52,11 @@ def main() -> None:
 
     image = (
         Image.debian_slim(python_version="3.12")
+        # torch and its CUDA wheels are most of the image; a layer of their own is cached across
+        # changes to everything else.
+        .pip_install(["torch==2.8.0"])
         .pip_install(
             [
-                "torch==2.8.0",
                 "diffusers==0.35.2",
                 "transformers==4.57.6",
                 "accelerate",
