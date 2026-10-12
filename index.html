@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LTX-Video Text to Video</title>
+<style>
+  /* Chalk marketing palette: green-1 ground, chartreuse primary, mint accents. */
+  :root { --bg:#224A41; --panel:#1C3B34; --line:#32645B; --ink:#EFF5F3; --muted:#B9CFC7;
+          --accent:#BBD96D; --mint:#70CD96; --err:#F8947F;
+          --mono:ui-monospace,"SFMono-Regular",Menlo,monospace; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink);
+         font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif; padding:32px 16px; }
+  html.embed body { padding:24px; }
+  html.embed header { display:none; }
+  header { text-align:center; margin-bottom:24px; }
+  h1 { font-size:22px; font-weight:500; margin:0 0 4px; letter-spacing:-0.3px; }
+  .sub { color:var(--muted); font-size:14px; }
+  main { max-width:960px; margin:0 auto; display:grid; gap:20px;
+         grid-template-columns:minmax(0,1fr) minmax(0,1.25fr); align-items:start; }
+  @media (max-width: 760px) { main { grid-template-columns:1fr; } }
+  label { font:12px/16px var(--mono); text-transform:uppercase; letter-spacing:.06em; color:var(--muted); }
+  textarea { width:100%; min-height:150px; resize:vertical; margin-top:8px; padding:12px 14px;
+             background:var(--panel); color:var(--ink); border:1px solid var(--line); border-radius:4px;
+             font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif; }
+  textarea:focus { outline:none; border-color:var(--mint); }
+  .count { text-align:right; font:11px var(--mono); color:var(--muted); margin-top:4px; }
+  .chips { display:flex; flex-wrap:wrap; gap:8px; margin:14px 0 18px; }
+  .chip { font:12px/14px var(--mono); padding:7px 12px; border-radius:20px; cursor:pointer;
+          background:transparent; color:var(--mint); border:1px solid var(--line); }
+  .chip:hover { border-color:var(--mint); }
+  button.go { font:13px/15px var(--mono); text-transform:uppercase; letter-spacing:.06em; width:100%;
+              border:1px solid var(--accent); border-radius:20px; padding:13px 22px; cursor:pointer;
+              background:var(--accent); color:var(--bg); transition:background .15s,color .15s; }
+  button.go:hover:not(:disabled) { background:transparent; color:var(--accent); }
+  button.go:disabled { opacity:.5; cursor:default; }
+  .stage { aspect-ratio:3 / 2; width:100%; background:var(--panel); border:1px solid var(--line);
+           border-radius:4px; position:relative; overflow:hidden; display:grid; place-items:center; }
+  .stage video { width:100%; height:100%; object-fit:cover; display:block; }
+  .idle { color:var(--muted); font-size:14px; text-align:center; padding:24px; }
+  .progress { position:absolute; inset:auto 0 0 0; height:3px; background:var(--line); }
+  .progress > div { height:100%; width:0; background:var(--mint); transition:width .4s ease; }
+  /* Placeholder while rendering: a field of frames filling in. */
+  .film { display:grid; grid-template-columns:repeat(12,1fr); gap:3px; width:80%; }
+  .film i { aspect-ratio:3 / 2; background:var(--line); border-radius:1px; opacity:.35;
+            transition:background .3s, opacity .3s; }
+  .film i.on { background:var(--mint); opacity:.9; }
+  .meta { display:flex; justify-content:space-between; gap:12px; margin-top:10px;
+          font:12px/16px var(--mono); text-transform:uppercase; letter-spacing:.06em; color:var(--muted); }
+  .meta a { color:var(--accent); text-decoration:none; }
+  .meta a:hover { text-decoration:underline; }
+  .err { color:var(--err); }
+  .notice { font-size:12px; line-height:1.5; color:var(--muted); margin-top:12px; }
+  .notice a { color:var(--muted); }
+  .gallery { grid-column:1 / -1; }
+  .gallery h2 { font:12px/16px var(--mono); text-transform:uppercase; letter-spacing:.06em;
+                color:var(--muted); font-weight:400; margin:8px 0 10px; }
+  .grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
+  @media (max-width: 760px) { .grid { grid-template-columns:1fr; } }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:4px; overflow:hidden; cursor:pointer; }
+  .card video, .card .ph { width:100%; aspect-ratio:3 / 2; display:block; object-fit:cover; background:var(--line); }
+  .card p { margin:10px 12px; padding:0; font-size:13px; line-height:1.4; color:var(--muted);
+            display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+</style>
+<script>
+  if (new URLSearchParams(location.search).has("embed")) document.documentElement.classList.add("embed");
+</script>
+</head>
+<body>
+  <header>
+    <h1>Text to video with LTX-Video</h1>
+    <div class="sub">LTX-Video 13B distilled on a Chalk GPU scaling group</div>
+  </header>
+  <main>
+    <section>
+      <label for="prompt">Describe a shot</label>
+      <textarea id="prompt" maxlength="600" placeholder="A lighthouse on a rocky cliff during a storm. Waves crash against the rocks below and the beam sweeps through heavy rain. Dramatic, cinematic lighting."></textarea>
+      <div class="count"><span id="count">0</span> / 600</div>
+      <div class="chips" id="chips"></div>
+      <button class="go" id="go">Generate clip</button>
+      <p class="notice">Clips are AI-generated by LTX-Video. By generating one you agree to the
+        use restrictions in the <a href="https://huggingface.co/Lightricks/LTX-Video/blob/main/LTX-Video-Open-Weights-License-0.X.txt" target="_blank" rel="noopener noreferrer">LTXV Open Weights License</a>
+        (Attachment A). Prompts and clips are deleted after an hour.</p>
+    </section>
+    <section>
+      <div class="stage" id="stage"><div class="idle">Your clip appears here: about 4 seconds at 768×512.<br>Describe the subject, the motion, the light and the camera.</div></div>
+      <div class="meta"><span id="status">Ready</span><span id="right"></span></div>
+    </section>
+    <section class="gallery">
+      <h2>Rendered on this GPU</h2>
+      <div class="grid" id="gallery"></div>
+    </section>
+  </main>
+<script>
+const SUGGESTIONS = [
+  ["Neon city", "A rainy neon-lit street in Tokyo at night. Reflections shimmer on wet asphalt as people with umbrellas walk past glowing signs. The camera glides slowly forward at eye level."],
+  ["Jellyfish", "Translucent jellyfish drift through deep blue water, their tentacles trailing in slow waves. Shafts of sunlight cut down from the surface. Calm, slow motion."],
+  ["Mountain lake", "Aerial drone shot gliding over a still alpine lake at sunrise. Mist hangs over the water and pine-covered mountains reflect perfectly on the surface."],
+  ["Paper boat", "A small paper boat floats down a rain-filled gutter, bobbing over tiny ripples. Close-up, shallow depth of field, soft overcast light."],
+];
+const $ = (id) => document.getElementById(id);
+const prompt = $("prompt"), go = $("go"), stage = $("stage"), statusEl = $("status"), right = $("right");
+let polling = null;
+
+for (const [label, text] of SUGGESTIONS) {
+  const b = document.createElement("button");
+  b.className = "chip"; b.type = "button"; b.textContent = label;
+  b.onclick = () => { prompt.value = text; updateCount(); prompt.focus(); };
+  $("chips").appendChild(b);
+}
+function updateCount() { $("count").textContent = prompt.value.length; }
+prompt.addEventListener("input", updateCount);
+
+function setStatus(text, isErr) {
+  statusEl.textContent = text;
+  statusEl.className = isErr ? "err" : "";
+}
+
+function showFilm(progress) {
+  let film = stage.querySelector(".film");
+  if (!film) {
+    stage.innerHTML = '<div class="film"></div><div class="progress"><div></div></div>';
+    film = stage.querySelector(".film");
+    for (let i = 0; i < 48; i++) film.appendChild(document.createElement("i"));
+  }
+  const cells = film.children, lit = Math.round(progress * cells.length);
+  for (let i = 0; i < cells.length; i++) cells[i].classList.toggle("on", i < lit);
+  stage.querySelector(".progress > div").style.width = Math.round(progress * 100) + "%";
+}
+
+function showVideo(url) {
+  stage.innerHTML = "";
+  const v = document.createElement("video");
+  v.src = url; v.autoplay = true; v.loop = true; v.muted = true; v.playsInline = true; v.controls = true;
+  stage.appendChild(v);
+}
+
+async function poll(jobId) {
+  const r = await fetch(`api/jobs/${jobId}`);
+  if (!r.ok) { setStatus("Lost track of that clip", true); return done(); }
+  const j = await r.json();
+  if (j.status === "queued") {
+    setStatus(j.position > 1 ? `Queued · ${j.position - 1} ahead of you` : "Starting");
+    showFilm(0);
+  } else if (j.status === "running") {
+    setStatus(`${j.stage || "Rendering"} · ${Math.round(j.progress * 100)}%`);
+    right.textContent = j.elapsed_s != null ? `${j.elapsed_s.toFixed(0)}s` : "";
+    showFilm(j.progress);
+  } else if (j.status === "done") {
+    showVideo(j.video_url);
+    setStatus(`Rendered in ${j.render_s.toFixed(1)}s`);
+    right.innerHTML = `AI-generated · <a href="${j.video_url}" download="ltx-video.mp4">Download</a>`;
+    return done();
+  } else {
+    setStatus("Rendering failed. Try a different prompt.", true);
+    return done();
+  }
+  polling = setTimeout(() => poll(jobId), 1000);
+}
+
+function done() { clearTimeout(polling); polling = null; go.disabled = false; }
+
+go.onclick = async () => {
+  const text = prompt.value.trim() || prompt.placeholder;
+  go.disabled = true; right.textContent = "";
+  setStatus("Submitting");
+  try {
+    const r = await fetch("api/generate", {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ prompt: text }),
+    });
+    const j = await r.json();
+    if (!r.ok) { setStatus(j.detail || "Could not start a render", true); return done(); }
+    poll(j.job_id);
+  } catch (e) {
+    setStatus("Could not reach the GPU", true); done();
+  }
+};
+
+async function loadGallery() {
+  const r = await fetch("api/gallery");
+  if (!r.ok) return;
+  const items = await r.json(), grid = $("gallery");
+  grid.innerHTML = "";
+  let pending = false;
+  for (const it of items) {
+    const card = document.createElement("div");
+    card.className = "card";
+    if (it.status === "done") {
+      const v = document.createElement("video");
+      v.src = it.video_url; v.autoplay = true; v.loop = true; v.muted = true; v.playsInline = true;
+      card.appendChild(v);
+    } else {
+      pending = true;
+      const ph = document.createElement("div"); ph.className = "ph"; card.appendChild(ph);
+    }
+    const p = document.createElement("p"); p.textContent = it.prompt; card.appendChild(p);
+    card.title = "Use this prompt";
+    card.onclick = () => { prompt.value = it.prompt; updateCount(); prompt.focus(); };
+    grid.appendChild(card);
+  }
+  if (pending) setTimeout(loadGallery, 5000);
+}
+loadGallery();
+
+// When embedded, tell the host page how tall the content is so it can size the iframe. The
+// body's own box is measured: documentElement.scrollHeight never drops below the iframe's
+// height, so it could only ever grow.
+if (document.documentElement.classList.contains("embed") && window.parent !== window) {
+  const report = () => window.parent.postMessage(
+    { type: "chalk-demo-height", height: Math.ceil(document.body.getBoundingClientRect().height) }, "*");
+  new ResizeObserver(report).observe(document.body);
+  report();
+}
+</script>
+</body>
+</html>
