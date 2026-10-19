@@ -20,7 +20,7 @@ prompt ──POST /api/generate──▶ FIFO queue ──▶ LTX-Video on one G
 ## Run it
 
 You need [`uv`](https://docs.astral.sh/uv/) and a Chalk environment that can schedule GPU
-workloads. Credentials come from `chalk config` in the current directory. You can also set
+workloads. Credentials come from the SDK’s ambient credentials from `chalk login`. You can also set
 `CHALK_API_SERVER`, `CHALK_CLIENT_ID`, `CHALK_CLIENT_SECRET` and `CHALK_ENVIRONMENT_ID` yourself.
 
 ```bash
@@ -95,3 +95,10 @@ Among other terms, it restricts use for organizations above a revenue threshold 
 commercial license, and it requires anyone you host the model for to follow its use restrictions
 and to be told that clips are machine-generated. The page in this repository shows that notice.
 Read the license before you deploy this for others.
+
+## Local authentication
+
+The SDK reads credentials, API host, and the selected environment from your existing
+`chalk login` in `~/.chalk.yml`, including project-scoped and default logins.
+For unattended runs, `CHALK_CLIENT_ID` and `CHALK_CLIENT_SECRET` remain supported. Where available, `--env-id`
+overrides the target environment; otherwise the SDK uses your login or environment settings.

@@ -10,7 +10,7 @@ The 13B distilled model needs about 40 GB of GPU memory, so the default is one L
 (48 GB). The replica downloads about 45 GB of weights when it boots, which keeps the
 image small enough to build and push quickly.
 
-Credentials come from `chalk config` in the current directory (or the CHALK_* env vars):
+Credentials come from your existing `chalk login` (or the CHALK_* env vars):
     ./deploy.py [--env-id <environment>] [--gpu nvidia-l40s]
 Then open the printed URL, describe a shot, and press "Generate clip".
 """
@@ -18,36 +18,24 @@ Then open the printed URL, describe a shot, and press "Generate clip".
 from __future__ import annotations
 
 import argparse
-import json
 import os
-import subprocess
 import time
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 
 
-def load_chalk_env(env_id: str | None) -> None:
-    if "CHALK_CLIENT_ID" not in os.environ:
-        cfg = json.loads(subprocess.check_output(["chalk", "config", "--json"]))
-        os.environ["CHALK_API_SERVER"] = cfg["apiServer"]["value"]
-        os.environ["CHALK_CLIENT_ID"] = cfg["clientId"]["value"]
-        os.environ["CHALK_CLIENT_SECRET"] = cfg["clientSecret"]["value"]
-        os.environ.setdefault("CHALK_ENVIRONMENT_ID", cfg["environment"]["value"])
-    if env_id:
-        os.environ["CHALK_ENVIRONMENT_ID"] = env_id
-
-
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--name", default="ltx-video")
-    # Defaults to the environment in `chalk config` (or CHALK_ENVIRONMENT_ID).
+    # Defaults to the environment in your existing `chalk login` (or CHALK_ENVIRONMENT_ID).
     parser.add_argument("--env-id", default=None)
     parser.add_argument("--gpu", default="nvidia-l40s")
     parser.add_argument("--ready-timeout", type=float, default=2400.0)
     args = parser.parse_args()
 
-    load_chalk_env(args.env_id)
+    if args.env_id:
+        os.environ["CHALK_ENVIRONMENT"] = args.env_id
     from chalkcompute import Image, ReadinessProbe, ScalingGroup
 
     image = (
