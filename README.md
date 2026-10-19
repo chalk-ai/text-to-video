@@ -24,7 +24,7 @@ workloads. Credentials come from the SDK’s ambient credentials from `chalk log
 `CHALK_API_SERVER`, `CHALK_CLIENT_ID`, `CHALK_CLIENT_SECRET` and `CHALK_ENVIRONMENT_ID` yourself.
 
 ```bash
-./deploy.py --gpu nvidia-l40s
+./deploy.py
 ```
 
 The replica downloads about 45 GB of weights from Hugging Face when it boots, then loads them onto
@@ -100,5 +100,5 @@ Read the license before you deploy this for others.
 
 The SDK reads credentials, API host, and the selected environment from your existing
 `chalk login` in `~/.chalk.yml`, including project-scoped and default logins.
-For unattended runs, `CHALK_CLIENT_ID` and `CHALK_CLIENT_SECRET` remain supported. Where available, `--env-id`
-overrides the target environment; otherwise the SDK uses your login or environment settings.
+For unattended runs, `CHALK_CLIENT_ID` and `CHALK_CLIENT_SECRET` remain supported.
+The examples use the current environment selected by your Chalk login.

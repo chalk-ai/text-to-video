@@ -11,14 +11,12 @@ The 13B distilled model needs about 40 GB of GPU memory, so the default is one L
 image small enough to build and push quickly.
 
 Credentials come from your existing `chalk login` (or the CHALK_* env vars):
-    ./deploy.py [--env-id <environment>] [--gpu nvidia-l40s]
+    ./deploy.py
 Then open the printed URL, describe a shot, and press "Generate clip".
 """
 
 from __future__ import annotations
 
-import argparse
-import os
 import time
 from pathlib import Path
 
@@ -26,16 +24,6 @@ HERE = Path(__file__).resolve().parent
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--name", default="ltx-video")
-    # Defaults to the environment in your existing `chalk login` (or CHALK_ENVIRONMENT_ID).
-    parser.add_argument("--env-id", default=None)
-    parser.add_argument("--gpu", default="nvidia-l40s")
-    parser.add_argument("--ready-timeout", type=float, default=2400.0)
-    args = parser.parse_args()
-
-    if args.env_id:
-        os.environ["CHALK_ENVIRONMENT"] = args.env_id
     from chalkcompute import Image, ReadinessProbe, ScalingGroup
 
     image = (
@@ -64,8 +52,8 @@ def main() -> None:
 
     sg = ScalingGroup(
         image=image,
-        name=args.name,
-        gpu=args.gpu,
+        name='ltx-video',
+        gpu='nvidia-l40s',
         # Sized to fit a g6e.2xlarge (8 vCPU, 64 GiB) next to the pod's sidecars; any larger
         # request makes Karpenter launch a much bigger and pricier instance for the same GPU.
         cpu="4",
@@ -83,7 +71,7 @@ def main() -> None:
     )
     t0 = time.monotonic()
     try:
-        sg.deploy(build_timeout=2400.0, ready_timeout=args.ready_timeout)
+        sg.deploy(build_timeout=2400.0, ready_timeout=2400.0)
     finally:
         print(f"deploy returned after {time.monotonic() - t0:.0f}s")
     print("web_url:", sg.web_url)
